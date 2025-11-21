@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Markel Services Dashboard</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --fg: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #334155;
+  --up-bg: #10b981;
+  --up-fg: #052e2b;
+  --down-bg: #ef4444;
+  --down-fg: #2f0d0d;
+  --deg-bg: #f59e0b;
+  --deg-fg: #3b2600;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+}
+header {
+  padding: 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+h1 { margin: 0 0 8px; }
+.ts { color: var(--muted); }
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 16px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+th, td {
+  padding: 10px;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+th {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+th:nth-child(1), td:nth-child(1) { width: 30%; }
+th:nth-child(2), td:nth-child(2) { width: 20%; }
+th:nth-child(3), td:nth-child(3) { width: 35%; }
+th:nth-child(4), td:nth-child(4) { width: 15%; }
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.badge.up { background: var(--up-bg); color: var(--up-fg); }
+.badge.down { background: var(--down-bg); color: var(--down-fg); }
+.badge.degraded { background: var(--deg-bg); color: var(--deg-fg); }
+.last-updated { margin-top: 12px; color: var(--muted); }
+footer {
+  color: var(--muted);
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Markel Services Dashboard</h1>
+  <div class='ts'>Auto-refresh every 5 minutes</div>
+</header>
+<main>
+  <div class='table-container'>
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Description</th>
+          <th>Link</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id='azure-status'>
+          <td>Azure Status</td>
+          <td class='status'><span class='badge degraded'>Loading...</span></td>
+          <td>Unknown</td>
+          <td><a href='https://azure.status.microsoft/en-us/statusView' target='_blank'>View</a></td>
+        </tr>
+        <tr id='azure-devops'>
+          <td>Azure DevOps</td>
+          <td class='status'><span class='badge degraded'>Loading...</span></td>
+          <td>Unknown</td>
+          <td><a href='https://status.dev.azure.com/View' target='_blank'>View</a></td>
+        </tr>
+        <tr id='azure-databricks'>
+          <td>Azure Databricks</td>
+          <td class='status'><span class='badge degraded'>Loading...</span></td>
+          <td>Unknown</td>
+          <td><a href='https://status.azuredatabricks.net/View' target='_blank'>View</a></td>
+        </tr>
+        <tr id='jfrog'>
+          <td>JFrog</td>
+          <td class='status'><span class='badge degraded'>Loading...</span></td>
+          <td>Unknown</td>
+          <td><a href='https://status.jfrog.io/View' target='_blank'>View</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class='last-updated'>Last updated: <span id='lastUpdated'>Loading...</span></div>
+</main>
+<footer>© Markel — Internal dashboard</footer>
+<script>
+const services = [
+  { name: 'Azure Status', url: 'https://azure.status.microsoft/api/status', rowId: 'azure-status' },
+  { name: 'Azure DevOps', url: 'https://status.dev.azure.com/api/status', rowId: 'azure-devops' },
+  { name: 'Azure Databricks', url: 'https://status.azuredatabricks.net/api/status', rowId: 'azure-databricks' },
+  { name: 'JFrog', url: 'https://status.jfrog.io/api/status', rowId: 'jfrog' }
+];
+function updateStatuses() {
+  services.forEach(service => {
+    fetch(service.url)
+      .then(response => response.json())
+      .then(data => {
+        let statusText = data.status || 'Unknown';
+        let badgeClass = 'degraded';
+        if (statusText.toLowerCase().includes('operational')) badgeClass = 'up';
+        if (statusText.toLowerCase().includes('down')) badgeClass = 'down';
+        const cell = document.querySelector(`#${service.rowId} .status`);
+        if (cell) {
+          cell.innerHTML = `<span class='badge ${badgeClass}'>${statusText}</span>`;
+        }
+      })
+      .catch(() => {
+        const cell = document.querySelector(`#${service.rowId} .status`);
+        if (cell) {
+          cell.innerHTML = `<span class='badge degraded'>Unknown</span>`;
+        }
+      });
+  });
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+}
+updateStatuses();
+setInterval(updateStatuses, 300000);
+setTimeout(() => location.reload(), 300000);
+</script>
+</body>
+</html>
